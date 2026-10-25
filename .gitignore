@@ -5,6 +5,9 @@
 node_modules/
 .playwright-cli/
 .workbuddy/
+create_manual.py
+outputs/
+.wbapp_*.genie
 *.log
 .DS_Store
 Thumbs.db

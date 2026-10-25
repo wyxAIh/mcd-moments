@@ -13,28 +13,6 @@ const MCP_TOKEN = process.env.MCD_MCP_TOKEN || '';
 const ROOT = __dirname;
 const MAX_BODY_BYTES = 64 * 1024;
 
-const DEMO_ACTIVITY = {
-  campaigns: [
-    { id: 'demo-summer', title: '夏日轻食能量季', description: '轻负担搭配与活动信息演示数据', period: '以门店实际活动为准' },
-    { id: 'demo-breakfast', title: '早餐活力组合', description: '早餐时段组合灵感演示数据', period: '以门店实际活动为准' },
-    { id: 'demo-family', title: '分享时刻', description: '多人分享组合灵感演示数据', period: '以门店实际活动为准' }
-  ]
-};
-
-const DEMO_NUTRITION = {
-  foods: [
-    { name: '板烧鸡腿堡', caloriesKcal: null, note: '营养数值请以官方最新数据为准' },
-    { name: '中薯条', caloriesKcal: null, note: '营养数值请以官方最新数据为准' },
-    { name: '玉米杯', caloriesKcal: null, note: '营养数值请以官方最新数据为准' }
-  ]
-};
-
-const DEMO_CANDIDATES = [
-  { id: 'seat-budget', seat: '预算席', title: '够吃就好，不为选择交税', tagline: '预算派 / 把钱花在主食上', items: ['麦香鸡', '小杯玉米杯'], estimatedCaloriesKcal: 422, estimatedPriceCny: 27.5, reason: '同一份菜单里优先选价格直给、够饱的组合；少一个“要不要再加”的纠结。', voteLabel: '我站预算派' },
-  { id: 'seat-novelty', seat: '尝鲜席', title: '今天就该试试新口味', tagline: '尝鲜派 / 把新品变成理由', items: ['龙焰鸡腿堡', '蓝莓爆爆珠麦旋风'], estimatedCaloriesKcal: null, estimatedPriceCny: 43.5, reason: '用当期活动和菜单新品，制造一个只有今天才成立的“去麦理由”。', voteLabel: '我站尝鲜派' },
-  { id: 'seat-moment', seat: '此刻席', title: '别再开会，去吃点热的', tagline: '此刻派 / 让时间与心情做决定', items: ['板烧鸡腿堡', '小杯玉米杯'], estimatedCaloriesKcal: 444, estimatedPriceCny: 40.5, reason: '你只有 20 分钟、一个人赶稿：这份组合够直接，也不用把时间耗在选餐上。', voteLabel: '我站此刻派' }
-];
-
 function sendJson(res, status, data) {
   const body = JSON.stringify(data);
   res.writeHead(status, {
@@ -117,12 +95,19 @@ function resultData(result) {
   if (result.structuredContent && Object.prototype.hasOwnProperty.call(result.structuredContent, 'data')) return result.structuredContent.data;
   if (Object.prototype.hasOwnProperty.call(result, 'data')) return result.data;
   const text = result.content?.find(item => item.type === 'text')?.text || '';
-  const marker = '## Original Response\\n\\n';
+  const marker = '## Original Response';
   const index = text.lastIndexOf(marker);
   if (index >= 0) {
-    try { return JSON.parse(text.slice(index + marker.length)).data; } catch { /* keep source text */ }
+    const raw = text.slice(index + marker.length).trim();
+    try {
+      const parsed = JSON.parse(raw);
+      return Object.prototype.hasOwnProperty.call(parsed, 'data') ? parsed.data : parsed;
+    } catch { /* continue to plain JSON parsing */ }
   }
-  return text || null;
+  try {
+    const parsed = JSON.parse(text);
+    return Object.prototype.hasOwnProperty.call(parsed, 'data') ? parsed.data : parsed;
+  } catch { return text || null; }
 }
 
 function unwrapData(result) {
@@ -143,141 +128,378 @@ async function attemptTools(calls) {
 function hasResult(result) { return Object.keys(result).length > 0; }
 
 async function apiHealth(_req, res) {
-  sendJson(res, 200, { ok: true, service: 'mcd-mcp-demo-proxy', mcpConfigured: Boolean(MCP_TOKEN), isDemo: !MCP_TOKEN, timestamp: new Date().toISOString() });
+  sendJson(res, 200, { ok: true, service: 'mcd-mcp-demo-proxy', mcpConfigured: Boolean(MCP_TOKEN), liveRequired: true, isDemo: !MCP_TOKEN, timestamp: new Date().toISOString() });
 }
 
 async function apiActivity(_req, res) {
+  if (!MCP_TOKEN) return sendJson(res, 503, { isDemo: false, error: 'LIVE_MCP_NOT_CONFIGURED', message: '服务器尚未配置麦当劳 MCP Token，无法返回实时活动。' });
   const { results, errors } = await attemptTools([['campaign-calendar', {}]]);
   const liveData = unwrapData(results['campaign-calendar']);
-  const live = Boolean(liveData);
-  sendJson(res, 200, { isDemo: !live, data: live ? { campaigns: liveData } : DEMO_ACTIVITY, ...(live ? {} : { fallbackReason: MCP_TOKEN ? 'MCP activity tool unavailable; showing demo data.' : 'MCD_MCP_TOKEN is not configured; showing demo data.' }), ...(Object.keys(errors).length ? { toolErrors: errors } : {}) });
+  if (!liveData) return sendJson(res, 502, { isDemo: false, error: 'LIVE_ACTIVITY_UNAVAILABLE', message: 'MCP 未返回实时活动。', toolErrors: errors });
+  sendJson(res, 200, { isDemo: false, data: { campaigns: liveData }, toolErrors: errors });
 }
 
 async function apiNutrition(_req, res) {
+  if (!MCP_TOKEN) return sendJson(res, 503, { isDemo: false, error: 'LIVE_MCP_NOT_CONFIGURED', message: '服务器尚未配置麦当劳 MCP Token，无法返回实时营养数据。' });
   const { results, errors } = await attemptTools([['list-nutrition-foods', {}]]);
   const liveData = unwrapData(results['list-nutrition-foods']);
-  const live = Boolean(liveData);
-  sendJson(res, 200, { isDemo: !live, data: live ? { foods: liveData } : DEMO_NUTRITION, ...(live ? {} : { fallbackReason: MCP_TOKEN ? 'MCP nutrition tool unavailable; showing demo data.' : 'MCD_MCP_TOKEN is not configured; showing demo data.' }), ...(Object.keys(errors).length ? { toolErrors: errors } : {}) });
+  if (!liveData) return sendJson(res, 502, { isDemo: false, error: 'LIVE_NUTRITION_UNAVAILABLE', message: 'MCP 未返回实时营养数据。', toolErrors: errors });
+  sendJson(res, 200, { isDemo: false, data: { foods: liveData }, toolErrors: errors });
+}
+
+function findMenuCollection(value, depth = 0) {
+  if (!value || depth > 5 || typeof value !== 'object') return null;
+  const keys = ['meals', 'products', 'items', 'foodList', 'mealList', 'menuItems', 'menu'];
+  for (const key of keys) {
+    if (Array.isArray(value[key]) || (value[key] && typeof value[key] === 'object')) return { collection: value[key], parent: value };
+  }
+  for (const child of Object.values(value)) {
+    const found = findMenuCollection(child, depth + 1);
+    if (found) return found;
+  }
+  return null;
+}
+
+function categoryTags(menuData) {
+  const tagsByCode = new Map();
+  const categories = Array.isArray(menuData?.categories) ? menuData.categories : [];
+  for (const category of categories) {
+    const entries = Array.isArray(category?.meals)
+      ? category.meals
+      : category?.meals && typeof category.meals === 'object'
+        ? Object.entries(category.meals).map(([code, value]) => ({ code, ...(value || {}) }))
+        : [];
+    for (const entry of entries) {
+      const code = entry.productCode || entry.productId || entry.code;
+      if (!code) continue;
+      const existing = tagsByCode.get(String(code)) || [];
+      const entryTags = Array.isArray(entry.tags) ? entry.tags : typeof entry.tags === 'string' ? [entry.tags] : [];
+      tagsByCode.set(String(code), [...new Set([...existing, category.name, ...entryTags].filter(Boolean))]);
+    }
+  }
+  return tagsByCode;
 }
 
 function catalogRows(menuData) {
   if (!menuData || typeof menuData !== 'object') return [];
-  const meals = menuData.meals || {};
-  return Object.entries(meals).map(([code, item]) => ({
-    code, name: item.name || item.productName || code,
-    price: Number(item.currentPrice ?? item.price ?? NaN),
-    tags: item.tags || []
-  }));
+  const found = findMenuCollection(menuData);
+  const meals = found?.collection || {};
+  const tagsByCode = categoryTags(menuData);
+  const entries = Array.isArray(meals) ? meals.map((item, index) => [item.productCode || item.productId || item.code || String(index), item]) : Object.entries(meals);
+  return entries.map(([code, item]) => {
+    if (!item || typeof item !== 'object') return null;
+    const rawPrice = Number(item.currentPrice ?? item.price ?? item.salePrice ?? item.amount ?? item.totalPrice ?? NaN);
+    const priceUnit = String(item.priceUnit || item.currencyUnit || '').toLowerCase();
+    const price = Number.isFinite(rawPrice) && ['fen', '分', 'cent'].includes(priceUnit) ? rawPrice / 100 : rawPrice;
+    const rowCode = String(item.productCode || item.productId || item.code || code);
+    const itemTags = Array.isArray(item.tags) ? item.tags : typeof item.tags === 'string' ? [item.tags] : [];
+    return {
+      code: rowCode,
+      name: item.name || item.productName || item.mealName || item.title || code,
+      price,
+      tags: [...new Set([...itemTags, ...(tagsByCode.get(rowCode) || [])])],
+      raw: item
+    };
+  }).filter(row => row && row.code && row.name);
 }
 
-function matchMeal(rows, patterns, fallbackPattern) {
+function numericPrice(data) {
+  if (!data || typeof data !== 'object') return null;
+  const value = Number(data.price);
+  return Number.isInteger(value) && value >= 0 ? value : null;
+}
+
+function matchMeal(rows, patterns, excluded = new Set(), allowFallback = true) {
+  const available = rows.filter(row => !excluded.has(row.code) && Number.isFinite(row.price) && row.price >= 0);
   for (const pattern of patterns) {
-    const found = rows.find(row => pattern.test(row.name));
+    const found = available.filter(row => pattern.test(`${row.name} ${row.tags.join(' ')}`)).sort((a, b) => a.price - b.price)[0];
     if (found) return found;
   }
-  return rows.find(row => fallbackPattern.test(row.name)) || rows.find(row => Number.isFinite(row.price)) || rows[0];
+  return allowFallback ? available.sort((a, b) => a.price - b.price)[0] || null : null;
 }
 
-function nutritionLookup(data, name) {
-  if (!data || typeof data !== 'string') return null;
-  const lines = data.split(/\r?\n/);
-  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const line = lines.find(row => new RegExp(`^\\s*${escaped},`).test(row));
-  if (!line) return null;
-  const kcal = Number(line.split(',')[3]);
-  return Number.isFinite(kcal) ? kcal : null;
+function budgetBounds(budget) {
+  return ({ '25-40': { min: 25, max: 40, label: '¥25—40/人' }, '40-60': { min: 40, max: 60, label: '¥40—60/人' }, '60-plus': { min: 60, max: Number.POSITIVE_INFINITY, label: '¥60+/人' } })[budget] || { min: 25, max: 40, label: '¥25—40/人' };
 }
 
-function buildCandidate(id, seat, title, tagline, reason, items, nutritionData) {
-  const calories = items.map(item => nutritionLookup(nutritionData, item.name));
-  return {
-    id, seat, title, tagline, items: items.map(item => item.name),
-    productCodes: items.map(item => ({ productCode: item.code, quantity: 1 })),
-    estimatedCaloriesKcal: calories.every(Number.isFinite) ? calories.reduce((sum, value) => sum + value, 0) : null,
-    estimatedPriceCny: items.every(item => Number.isFinite(item.price)) ? Number(items.reduce((sum, item) => sum + item.price, 0).toFixed(2)) : null,
-    reason, priceSource: 'menu', voteLabel: `我站${seat}`
+function budgetMaximum(budget) { return budgetBounds(budget).max; }
+
+function rowText(row) { return `${row.name} ${row.tags.join(' ')}`; }
+function isSetMeal(row) { return /套餐|三件套|单人餐|双人餐|多人餐|拼盘|分享|便民套餐|精选餐/i.test(rowText(row)); }
+function isShareMeal(row) { return /分享|多人|双人|家庭|拼盘|鸡薯双全盒/i.test(rowText(row)); }
+function isPrimaryMeal(row) { return isSetMeal(row) || /汉堡|鸡肉|牛肉|猪柳|麦香鱼|麦乐鸡|鸡翅|鸡排|主食/i.test(rowText(row)); }
+function isSideMeal(row) { return /玉米|苹果|沙拉|薯条|饮品|小食|茶|水|麦旋风|冰淇淋|派|脆薯饼|麦咖啡|雪碧|可乐|美汁源|红茶/i.test(rowText(row)); }
+function isNovelty(row) { return /上新|新品|限定|联名|季节|新口味|蓝莓|龙焰|心形/i.test(rowText(row)); }
+
+function productQuantity(row, partySize) {
+  const text = rowText(row);
+  if (/双人餐|双人分享|二人/i.test(text)) return Math.max(1, Math.ceil(partySize / 2));
+  if (/分享|多人|家庭|拼盘|桶|鸡薯双全盒/i.test(text)) return Math.max(1, Math.ceil(partySize / 3));
+  return partySize;
+}
+
+function budgetTarget(budget) {
+  const bounds = budgetBounds(budget);
+  if (!Number.isFinite(bounds.max)) return Math.max(bounds.min, 60);
+  return bounds.min + (bounds.max - bounds.min) * 0.65;
+}
+
+function preferenceSideRows(rows, prefs) {
+  let sides = rows.filter(isSideMeal);
+  if (prefs.includes('light')) {
+    const lightOptions = sides.filter(row => /玉米|苹果|沙拉|茶|水|无糖|零度|清爽/i.test(rowText(row)));
+    if (lightOptions.length) sides = lightOptions;
+  }
+  if (prefs.includes('sugar')) {
+    const lowerSugarOptions = sides.filter(row => /水|无糖|零度|茶|苹果|玉米|沙拉/i.test(rowText(row)));
+    if (lowerSugarOptions.length) sides = lowerSugarOptions;
+  }
+  return sides;
+}
+
+function estimateSpecPerPerson(items, partySize) {
+  return items.reduce((sum, row) => sum + row.price * productQuantity(row, partySize), 0) / partySize;
+}
+
+function specKey(items, partySize) {
+  return items.map(row => `${row.code}:${productQuantity(row, partySize)}`).sort().join('|');
+}
+
+function buildSeatSpecs({ seat, rows, budget, time, partySize, prefs, vibe }) {
+  const { max } = budgetBounds(budget);
+  const mains = rows.filter(isPrimaryMeal);
+  const sides = preferenceSideRows(rows, prefs);
+  const setMeals = mains.filter(isSetMeal);
+  const singles = mains.filter(row => !isSetMeal(row));
+  const noveltyRows = rows.filter(isNovelty);
+  const specs = [];
+  const push = (items, priority = 0) => {
+    if (!items.length || items.length > 2) return;
+    const perPerson = estimateSpecPerPerson(items, partySize);
+    if (!Number.isFinite(perPerson) || perPerson < 0 || perPerson > max) return;
+    specs.push({ items, perPerson, priority });
   };
+
+  if (seat === 'budget') {
+    for (const meal of setMeals) push([meal], 4);
+    for (const main of singles) {
+      push([main], 0);
+      for (const side of sides) {
+        if (side.code === main.code) continue;
+        push([main, side], prefs.includes('full') ? 5 : 2);
+      }
+    }
+    if (prefs.includes('share')) for (const meal of setMeals.filter(isShareMeal)) push([meal], 10);
+  } else if (seat === 'novelty') {
+    const noveltyMains = noveltyRows.filter(isPrimaryMeal);
+    const noveltySides = noveltyRows.filter(row => isSideMeal(row) && !isPrimaryMeal(row));
+    for (const main of noveltyMains) {
+      if (isSetMeal(main)) push([main], 8);
+      else {
+        push([main], 2);
+        for (const side of sides) if (side.code !== main.code) push([main, side], isNovelty(side) ? 10 : 4);
+      }
+    }
+    const vibeMain = mains.filter(row => !isSetMeal(row)).sort((a, b) => {
+      const pattern = vibe === 'family' ? /儿童|家庭|分享|盒/i : vibe === 'friends' ? /分享|多人|双人|盒/i : vibe === 'recharge' ? /板烧|鸡肉|牛肉/i : /汉堡|精选|人气/i;
+      return Number(pattern.test(rowText(b))) - Number(pattern.test(rowText(a)));
+    });
+    for (const main of vibeMain) for (const side of noveltySides.length ? noveltySides : sides) push([main, side], noveltySides.length ? 10 : 1);
+    for (const meal of setMeals.filter(isNovelty)) push([meal], 12);
+  } else {
+    const vibePattern = vibe === 'family' ? /儿童|家庭|分享|多人|双人|盒|拼盘/i
+      : vibe === 'friends' ? /分享|多人|双人|盒|拼盘/i
+        : vibe === 'recharge' ? /板烧|鸡肉|牛肉|主食/i
+          : /汉堡|精选|人气|主食/i;
+    const shareMains = prefs.includes('share') ? mains.filter(isShareMeal) : [];
+    const orderedMains = [...new Set([...shareMains, ...mains.filter(row => vibePattern.test(rowText(row))), ...mains])];
+    for (const main of orderedMains) {
+      if (isSetMeal(main)) push([main], prefs.includes('share') && isShareMeal(main) ? 12 : 7);
+      else {
+        push([main], 1);
+        for (const side of sides) if (side.code !== main.code) push([main, side], 4);
+      }
+    }
+  }
+
+  const unique = new Map();
+  for (const spec of specs) {
+    const key = specKey(spec.items, partySize);
+    const existing = unique.get(key);
+    if (!existing || spec.priority > existing.priority) unique.set(key, spec);
+  }
+  const timePreference = spec => {
+    const oneCode = spec.items.length === 1;
+    if (time <= 20) return oneCode ? 3 : 0;
+    if (time >= 60) return oneCode ? 0 : 2;
+    return oneCode ? 1 : 0;
+  };
+  const target = budgetTarget(budget);
+  return [...unique.values()].sort((a, b) => {
+    const shareBonus = spec => prefs.includes('share') && spec.items.some(isShareMeal) ? 8 : 0;
+    const fullBonus = spec => prefs.includes('full') ? (spec.items.length > 1 || spec.items.some(isSetMeal) ? 3 : 0) : 0;
+    const aScore = a.priority + timePreference(a) + shareBonus(a) + fullBonus(a) - Math.abs(a.perPerson - target) / 10;
+    const bScore = b.priority + timePreference(b) + shareBonus(b) + fullBonus(b) - Math.abs(b.perPerson - target) / 10;
+    return bScore - aScore;
+  });
+}
+
+function makeSeatCandidate({ id, seat, title, tagline, items, preferences, partySize, reason }) {
+  const selected = items.filter(Boolean);
+  const productCodes = selected.map(item => ({ productCode: item.code, quantity: productQuantity(item, partySize) }));
+  const estimatedPriceCny = Number(selected.reduce((sum, item, index) => sum + item.price * productCodes[index].quantity, 0).toFixed(2));
+  return {
+    id, seat, title, tagline, items: selected.map(item => item.name), productCodes,
+    estimatedPriceCny, estimatedPricePerPersonCny: Number((estimatedPriceCny / partySize).toFixed(2)),
+    estimatedCaloriesKcal: null, reason, priceSource: 'menu', voteLabel: `我站${seat}`,
+    tools: ['campaign-calendar', 'list-nutrition-foods', 'query-nearby-stores', 'query-meals', 'calculate-price'],
+    preferences
+  };
+}
+
+function candidateReason({ vibeText, time, partySize, budget, pricePerPerson, prefs, items, seat }) {
+  const budgetLabel = { '25-40': '¥25—40/人', '40-60': '¥40—60/人', '60-plus': '¥60+/人' }[budget] || '自定预算';
+  const preferenceLabel = { light: '清爽', full: '饱腹', sugar: '少糖/无糖', share: '适合分享' };
+  const preferenceText = prefs.length ? `；偏好：${prefs.map(pref => preferenceLabel[pref] || pref).join('、')}` : '';
+  const priceText = Number.isFinite(pricePerPerson) ? `约 ¥${pricePerPerson.toFixed(2)}/人` : '价格以实时计算结果为准';
+  return `${vibeText} · ${time} 分钟 · ${partySize} 人 · 预算 ${budgetLabel}；${seat}推荐 ${items.map(item => item.name).join(' + ')}，${priceText}${preferenceText}。`;
+}
+
+function amountYuanFromFen(value) {
+  const amount = Number(value);
+  return Number.isInteger(amount) && amount >= 0 ? Number((amount / 100).toFixed(2)) : null;
+}
+
+function matchesPricedItems(priceData, productCodes) {
+  if (!Array.isArray(priceData?.productList) || !priceData.productList.length) return false;
+  const expected = new Map();
+  const actual = new Map();
+  for (const item of productCodes) expected.set(String(item.productCode), (expected.get(String(item.productCode)) || 0) + Number(item.quantity));
+  for (const item of priceData.productList) {
+    if (!item?.productCode || !Number.isFinite(Number(item.quantity))) continue;
+    const code = String(item.productCode);
+    actual.set(code, (actual.get(code) || 0) + Number(item.quantity));
+  }
+  return expected.size === actual.size && [...expected].every(([code, quantity]) => actual.get(code) === quantity);
 }
 
 async function apiChallenge(req, res) {
   const input = await readBody(req);
   const city = typeof input.city === 'string' && input.city.trim() ? input.city.trim().slice(0, 40) : '杭州';
   const keyword = typeof input.keyword === 'string' && input.keyword.trim() ? input.keyword.trim().slice(0, 60) : city;
-  const vibe = typeof input.vibe === 'string' ? input.vibe.slice(0, 32) : 'focus';
-  const budget = typeof input.budget === 'string' ? input.budget.slice(0, 24) : '25-40';
+  const vibe = ['focus', 'friends', 'recharge', 'family'].includes(input.vibe) ? input.vibe : 'focus';
+  const budget = ['25-40', '40-60', '60-plus'].includes(input.budget) ? input.budget : '25-40';
   const time = Number.isInteger(input.time) ? Math.max(5, Math.min(input.time, 180)) : 20;
-  const partySize = Number.isInteger(input.partySize) ? Math.max(1, Math.min(input.partySize, 20)) : 1;
-  const preferences = { city, vibe, budget, time, partySize, prefs: Array.isArray(input.prefs) ? input.prefs.filter(x => typeof x === 'string').slice(0, 8) : [] };
-  const errors = {};
+  const partySize = Number.isInteger(input.partySize) ? Math.max(1, Math.min(input.partySize, 8)) : 1;
+  const prefs = Array.isArray(input.prefs) ? input.prefs.filter(x => ['light', 'full', 'sugar', 'share'].includes(x)).slice(0, 8) : [];
+  const vibeLabels = { focus: '赶稿冲刺', friends: '见朋友', recharge: '一个人回血', family: '带娃出门' };
+  const preferences = { city, vibe, vibeText: vibeLabels[vibe], budget, time, partySize, prefs };
   if (!MCP_TOKEN) {
-    return sendJson(res, 200, { isDemo: true, candidates: DEMO_CANDIDATES, preferences, fallbackReason: 'MCD_MCP_TOKEN is not configured; showing demo candidates.', notice: '此为演示候选，不是官方报价或营养建议。' });
+    return sendJson(res, 503, { isDemo: false, error: 'LIVE_MCP_NOT_CONFIGURED', message: '服务器尚未配置麦当劳 MCP Token，无法返回实时菜单或价格。', preferences });
   }
 
-  const [activityResult, nutritionResult, storesResult] = await Promise.all([
-    mcpCall('campaign-calendar', {}).catch(err => { errors['campaign-calendar'] = err.message; return null; }),
-    mcpCall('list-nutrition-foods', {}).catch(err => { errors['list-nutrition-foods'] = err.message; return null; }),
-    mcpCall('query-nearby-stores', { beType: 1, city, keyword, searchType: 2 }).catch(err => { errors['query-nearby-stores'] = err.message; return null; })
-  ]);
-  const activity = unwrapData(activityResult);
-  const nutrition = unwrapData(nutritionResult);
-  const storeData = unwrapData(storesResult);
-  const store = Array.isArray(storeData) ? storeData.find(item => item.businessStatus !== false) || storeData[0] : null;
-  let menuResult = null;
-  let menuData = null;
-  if (store?.storeCode) {
+  const toolStatus = {};
+  const errors = {};
+  const call = async (name, args = {}) => {
     try {
-      menuResult = await mcpCall('query-meals', { storeCode: store.storeCode, orderType: 1, beType: 1 });
-      menuData = unwrapData(menuResult);
-    } catch (err) { errors['query-meals'] = err.message; }
-  } else if (MCP_TOKEN && !errors['query-nearby-stores']) {
-    errors['query-nearby-stores'] = 'No store returned for selected city and keyword';
+      const raw = await mcpCall(name, args);
+      toolStatus[name] = { status: 'ok' };
+      return unwrapData(raw);
+    } catch (err) {
+      errors[name] = err.message;
+      toolStatus[name] = { status: 'error', message: err.message };
+      return null;
+    }
+  };
+  const [activity, nutrition, storeData] = await Promise.all([
+    call('campaign-calendar'),
+    call('list-nutrition-foods'),
+    call('query-nearby-stores', { beType: 1, city, keyword, searchType: 2 })
+  ]);
+  const storeRows = Array.isArray(storeData)
+    ? storeData
+    : Array.isArray(storeData?.stores)
+      ? storeData.stores
+      : Array.isArray(storeData?.data)
+        ? storeData.data
+        : Array.isArray(storeData?.list)
+          ? storeData.list
+          : [];
+  const store = storeRows.find(item => item.businessStatus !== false) || storeRows[0] || null;
+  if (!store?.storeCode) {
+    return sendJson(res, 502, { isDemo: false, error: 'LIVE_STORE_UNAVAILABLE', message: 'MCP 未返回可用门店，本次没有生成演示冒充的实时推荐。请确认城市/关键词后重试。', preferences, toolStatus, toolErrors: errors });
+  }
+  const menuData = await call('query-meals', { storeCode: store.storeCode, orderType: 1, beType: 1 });
+  const rows = catalogRows(menuData).filter(row => Number.isFinite(row.price) && row.price >= 0);
+  if (!rows.length) {
+    return sendJson(res, 502, { isDemo: false, error: 'LIVE_MENU_UNAVAILABLE', message: '已找到门店，但 MCP 未返回可用于筛选的实时菜单，本次未使用固定样例替代。', preferences, toolStatus, toolErrors: errors });
   }
 
-  const rows = catalogRows(menuData);
-  let candidates = DEMO_CANDIDATES;
-  let priceResults = {};
-  if (rows.length) {
-    const budgetMain = matchMeal(rows, [/麥香鸡|麦香鸡/, /吉士汉堡包/, /麦香鱼/], /单人餐|套餐/);
-    const budgetSide = matchMeal(rows, [/玉米杯/, /苹果片/, /脆薯饼/], /小食/);
-    const noveltyMain = matchMeal(rows, [/龙焰鸡腿堡/, /“我就喜欢”鸡薯双全盒/, /心形薯饼/], /上新/);
-    const noveltySide = matchMeal(rows, [/蓝莓爆爆珠麦旋风/, /麦旋风/, /圆筒冰淇淋/], /新品|上新/);
-    const momentMain = matchMeal(rows, [/板烧鸡腿堡/, /精选单人餐/, /麦辣鸡腿汉堡/], /汉堡|鸡/);
-    const momentSide = matchMeal(rows, [/玉米杯/, /小杯玉米杯/, /锡兰红茶/], /饮品|小食/);
-    const nutritionData = typeof nutrition === 'string' ? nutrition : (nutrition?.data || '');
-    candidates = [
-      buildCandidate('seat-budget', '预算席', '够吃就好，不为选择交税', '预算派 / 把钱花在主食上', '同一份门店菜单里先把预算说清楚：用真实在售商品拼出不绕弯的答案。', [budgetMain, budgetSide].filter(Boolean), nutritionData),
-      buildCandidate('seat-novelty', '尝鲜席', '今天就该试试新口味', '尝鲜派 / 把新品变成理由', '让当期活动和门店上新一起说话，找一个“今天才成立”的去麦理由。', [noveltyMain, noveltySide].filter(Boolean), nutritionData),
-      buildCandidate('seat-moment', '此刻席', '别再开会，去吃点热的', '此刻派 / 让时间与心情做决定', `${city} · ${time} 分钟 · ${partySize} 人：把这个具体时刻变成一份马上能选的菜单。`, [momentMain, momentSide].filter(Boolean), nutritionData)
-    ];
-    await Promise.all(candidates.map(async candidate => {
-      try {
-        const priced = await mcpCall('calculate-price', { storeCode: store.storeCode, orderType: 1, beType: 1, items: candidate.productCodes, needTableware: false });
-        const data = unwrapData(priced);
-        if (data && Number.isFinite(Number(data.price))) {
-          candidate.estimatedPriceCny = Number((Number(data.price) / 100).toFixed(2));
-          candidate.originalPriceCny = Number.isFinite(Number(data.originalPrice)) ? Number((Number(data.originalPrice) / 100).toFixed(2)) : candidate.estimatedPriceCny;
-          candidate.discountCny = Number.isFinite(Number(data.discount)) ? Number((Number(data.discount) / 100).toFixed(2)) : 0;
-          candidate.priceSource = 'calculate-price';
-          priceResults[candidate.id] = data;
-        }
-      } catch (err) { errors['calculate-price:' + candidate.id] = err.message; }
-    }));
+  const usable = rows.filter(row => row.price > 0);
+  const budgetLabel = budgetBounds(budget).label;
+  const partyTitle = partySize > 1 ? `${partySize} 人同行` : '一个人';
+  const activityRows = Array.isArray(activity) ? activity : Array.isArray(activity?.campaigns) ? activity.campaigns : Array.isArray(activity?.data) ? activity.data : [];
+  const activityText = activityRows.slice(0, 2).map(item => item.title || item.name).filter(Boolean).join('、');
+  const seatConfigs = [
+    { id: 'seat-budget', seat: '预算席', kind: 'budget', title: `${budgetLabel}内，先把这一餐安排稳`, tagline: `实时菜单 · 人均预算 ${budgetLabel}` },
+    { id: 'seat-novelty', seat: '尝鲜席', kind: 'novelty', title: '从当前门店菜单里换个口味', tagline: activityText ? `当期活动：${activityText}` : '按本店实时菜单寻找不同选择' },
+    { id: 'seat-moment', seat: '此刻席', kind: 'moment', title: `${vibeLabels[vibe]} · ${time} 分钟的这一餐`, tagline: `${partyTitle} · ${budgetLabel} · 按此刻需求筛选` }
+  ];
+  const candidates = [];
+  const selectedSpecKeys = new Set();
+  for (const config of seatConfigs) {
+    const specs = buildSeatSpecs({ seat: config.kind, rows: usable, budget, time, partySize, prefs, vibe });
+    const spec = specs.find(option => !selectedSpecKeys.has(specKey(option.items, partySize))) || specs[0];
+    if (!spec) {
+      return sendJson(res, 502, { isDemo: false, error: 'LIVE_NO_BUDGET_OPTIONS', message: `${config.seat}未找到符合 ${budgetLabel} 的实时菜单组合，本次不使用固定样例补位。`, preferences, toolStatus, toolErrors: errors });
+    }
+    selectedSpecKeys.add(specKey(spec.items, partySize));
+    const title = config.kind === 'novelty' && spec.items[0] ? `用「${spec.items[0].name}」给今天一个新理由` : config.title;
+    candidates.push(makeSeatCandidate({ id: config.id, seat: config.seat, title, tagline: config.tagline, reason: '', items: spec.items, preferences, partySize, vibe }));
   }
-  const live = Boolean(store && rows.length);
+  const priceResults = {};
+  await Promise.all(candidates.map(async candidate => {
+    try {
+      const priced = await mcpCall('calculate-price', { storeCode: store.storeCode, orderType: 1, beType: 1, items: candidate.productCodes, needTableware: false });
+      const data = unwrapData(priced);
+      const rawPrice = numericPrice(data);
+      if (!Number.isInteger(rawPrice)) throw new Error('MCP 未返回整数分的应付总价');
+      if (!matchesPricedItems(data, candidate.productCodes)) throw new Error('MCP 返回的商品明细与本方案不一致');
+      const priceInYuan = amountYuanFromFen(rawPrice);
+      if (priceInYuan === null) throw new Error('MCP 返回的价格不是有效分金额');
+      candidate.estimatedPriceCny = priceInYuan;
+      candidate.estimatedPricePerPersonCny = Number((priceInYuan / partySize).toFixed(2));
+      const originalPriceCny = amountYuanFromFen(data.originalPrice);
+      const discountCny = amountYuanFromFen(data.discount);
+      candidate.originalPriceCny = originalPriceCny === null ? priceInYuan : originalPriceCny;
+      candidate.discountCny = discountCny === null ? 0 : discountCny;
+      candidate.priceSource = 'calculate-price';
+      priceResults[candidate.id] = data;
+      toolStatus[`calculate-price:${candidate.id}`] = { status: 'ok' };
+    } catch (err) {
+      errors[`calculate-price:${candidate.id}`] = err.message;
+      toolStatus[`calculate-price:${candidate.id}`] = { status: 'error', message: err.message };
+      candidate.priceSource = 'menu';
+    }
+  }));
+  const allPricesLive = candidates.every(candidate => candidate.priceSource === 'calculate-price');
+  if (!allPricesLive) {
+    return sendJson(res, 502, { isDemo: false, error: 'LIVE_PRICE_UNAVAILABLE', message: '菜单已实时读取，但至少一个方案的价格未能通过 MCP 价格工具确认；为避免把菜单估算冒充实价，本次不展示候选。', preferences, toolStatus, toolErrors: errors });
+  }
+  const maxPerPerson = budgetMaximum(budget);
+  const overBudget = candidates.filter(candidate => Number.isFinite(maxPerPerson) && candidate.estimatedPricePerPersonCny > maxPerPerson);
+  if (overBudget.length) {
+    const names = overBudget.map(candidate => candidate.seat).join('、');
+    return sendJson(res, 502, { isDemo: false, error: 'LIVE_BUDGET_REJECTED', message: `${names}的 MCP 核价超过 ${budgetLabel} 上限，本次不展示超预算方案。`, preferences, toolStatus, toolErrors: errors });
+  }
+  candidates.forEach(candidate => {
+    const items = candidate.productCodes.map(item => rows.find(row => row.code === String(item.productCode))).filter(Boolean);
+    candidate.reason = candidateReason({ vibeText: vibeLabels[vibe], time, partySize, budget, pricePerPerson: candidate.estimatedPricePerPersonCny, prefs, items, seat: candidate.seat });
+  });
   sendJson(res, 200, {
-    isDemo: !live,
-    candidates: live ? candidates : DEMO_CANDIDATES,
-    preferences,
-    sourceData: live ? {
-      store: { storeName: store.storeName, address: store.address, storeCode: store.storeCode, distance: store.distance },
-      menu: menuData,
-      activity,
-      nutrition: nutritionDataSummary(nutrition),
-      priceResults
-    } : { activity, nutrition: nutritionDataSummary(nutrition), stores: storeData },
-    ...(live ? {} : { fallbackReason: 'Live store/menu data unavailable; showing clearly marked demo candidates.' }),
-    ...(Object.keys(errors).length ? { toolErrors: errors } : {}),
-    notice: '商品与活动来自麦当劳 MCP；价格经门店价格计算工具返回（未创建订单）。营养数据仅作信息参考，具体以门店实际为准。'
+    isDemo: false, candidates, preferences, toolStatus,
+    sourceData: { store: { storeName: store.storeName, address: store.address, storeCode: store.storeCode, distance: store.distance }, menu: menuData, activity, nutrition: nutritionDataSummary(nutrition), priceResults },
+    notice: '门店、菜单、活动和价格来自本次麦当劳 MCP 读取；营养信息仅作参考。本服务不会创建订单或发起支付。'
   });
 }
 
@@ -319,4 +541,8 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, HOST, () => console.log(`MCD demo proxy listening on http://${HOST}:${PORT}`));
+if (require.main === module) {
+  server.listen(PORT, HOST, () => console.log(`MCD demo proxy listening on http://${HOST}:${PORT}`));
+}
+
+module.exports = { server, catalogRows, budgetMaximum, budgetBounds, candidateReason, makeSeatCandidate, numericPrice };
