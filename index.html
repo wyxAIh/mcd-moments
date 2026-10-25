@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f9f4ea">
+  <meta name="description" content="麦时刻 MCD MOMENTS：把你当下的时间、情绪、预算和同行关系，变成此刻最值得去麦的一个理由。">
+  <title>麦时刻 / MCD MOMENTS</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#planner">跳到麦时刻规划器</a>
+  <div class="page-shell">
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="麦时刻首页">
+        <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+        <span class="brand-type"><strong>麦时刻</strong><em>MCD MOMENTS</em></span>
+      </a>
+      <nav class="site-nav" aria-label="主导航">
+        <a href="#planner">找一个理由</a>
+        <a href="#chain">MCP 链路</a>
+        <a href="#demo-console">现场 Demo 台</a>
+      </nav>
+      <div class="header-meta">
+        <span class="live-dot" aria-hidden="true"></span>
+        <span class="header-status" id="header-status">MCP READY</span>
+        <span class="header-time" id="clock" aria-label="当前时间">--:--</span>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero section-pad" aria-labelledby="hero-title">
+        <div class="hero-copy reveal">
+          <p class="eyebrow"><span>01</span> MOMENT ENGINE / 麦时刻引擎</p>
+          <h1 id="hero-title">把这一刻，<br><span>变成值得去麦</span>的一刻。</h1>
+          <p class="hero-lede">不是替你点一份餐。我们把当下的时间、情绪、预算和同行关系，拼成一个<strong>现在就能执行</strong>的麦当劳理由。</p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#planner">告诉我你的这一刻 <span aria-hidden="true">↘</span></a>
+            <a class="text-link" href="#chain">看它怎么被算出来 <span aria-hidden="true">→</span></a>
+          </div>
+          <div class="hero-proof" aria-label="产品能力摘要">
+            <span><b>4</b> 个输入</span><i aria-hidden="true"></i>
+            <span><b>5</b> 项 MCP 能力</span><i aria-hidden="true"></i>
+            <span><b>1</b> 个此刻理由</span>
+          </div>
+        </div>
+
+        <div class="hero-art reveal reveal-delay-1" aria-label="麦时刻票根视觉">
+          <div class="hero-art-topline"><span>NO. 024 / MOMENT PASS</span><span>2025—∞</span></div>
+          <div class="hero-art-main">
+            <p class="art-script">your moment</p>
+            <div class="art-badge">NOW<br><small>IS GOOD</small></div>
+            <div class="art-stamp">MCD<br>LIVE</div>
+            <div class="art-lines" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+            <p class="art-note">时间会过去<br>这一餐刚刚好</p>
+          </div>
+          <div class="hero-art-bottom"><span>VALID FOR ONE GOOD IDEA</span><span class="barcode" aria-hidden="true"></span></div>
+          <div class="orbit orbit-one" aria-hidden="true"></div>
+          <div class="orbit orbit-two" aria-hidden="true"></div>
+        </div>
+      </section>
+
+      <section class="moment-marquee" aria-label="实时灵感">
+        <div class="marquee-track">
+          <span>此刻值得去麦的理由</span><b aria-hidden="true">✳</b><span>少一点选择，多一点刚刚好</span><b aria-hidden="true">✳</b><span>THIS MOMENT IS YOURS</span><b aria-hidden="true">✳</b><span>此刻值得去麦的理由</span><b aria-hidden="true">✳</b><span>少一点选择，多一点刚刚好</span><b aria-hidden="true">✳</b>
+        </div>
+      </section>
+
+      <section class="planner section-pad" id="planner" aria-labelledby="planner-title">
+        <div class="section-heading reveal">
+          <div>
+            <p class="eyebrow"><span>02</span> YOUR INPUT / 你的输入</p>
+            <h2 id="planner-title">先说说，<em>现在的你。</em></h2>
+          </div>
+          <p class="heading-note">四个选择，给这一刻<br>一个可以落地的答案。</p>
+        </div>
+
+        <div class="planner-layout">
+          <form class="input-sheet reveal" id="moment-form" novalidate>
+            <div class="sheet-head"><span>01—04</span><span class="sheet-status">MOMENT INTAKE</span></div>
+            <fieldset class="input-block">
+              <legend><span class="question-number">01</span>你现在是哪一种？</legend>
+              <div class="option-grid vibe-grid" role="radiogroup" aria-label="当前状态">
+                <button class="option-card is-selected" type="button" role="radio" aria-checked="true" data-field="vibe" data-value="focus"><span class="option-icon">⌁</span><strong>赶稿冲刺</strong><small>要快、要稳、别分心</small></button>
+                <button class="option-card" type="button" role="radio" aria-checked="false" data-field="vibe" data-value="friends"><span class="option-icon">◌</span><strong>见朋友</strong><small>边聊边吃，分享刚好</small></button>
+                <button class="option-card" type="button" role="radio" aria-checked="false" data-field="vibe" data-value="recharge"><span class="option-icon">⌇</span><strong>一个人回血</strong><small>给自己一口安静时间</small></button>
+                <button class="option-card" type="button" role="radio" aria-checked="false" data-field="vibe" data-value="family"><span class="option-icon">⊙</span><strong>带娃出门</strong><small>大人小孩都能吃得开心</small></button>
+              </div>
+            </fieldset>
+
+            <fieldset class="input-block compact-block">
+              <legend><span class="question-number">02</span>今天想把预算放在哪个区间？</legend>
+              <div class="chip-row" role="radiogroup" aria-label="预算">
+                <button class="filter-chip is-selected" type="button" role="radio" aria-checked="true" data-field="budget" data-value="25-40">¥25—40</button>
+                <button class="filter-chip" type="button" role="radio" aria-checked="false" data-field="budget" data-value="40-60">¥40—60</button>
+                <button class="filter-chip" type="button" role="radio" aria-checked="false" data-field="budget" data-value="60-plus">¥60+</button>
+              </div>
+            </fieldset>
+
+            <div class="split-fields">
+              <fieldset class="input-block compact-block">
+                <legend><span class="question-number">03</span>你有多少时间？</legend>
+                <div class="chip-row chip-row-small" role="radiogroup" aria-label="时间窗口">
+                  <button class="filter-chip is-selected" type="button" role="radio" aria-checked="true" data-field="time" data-value="20">20 MIN</button>
+                  <button class="filter-chip" type="button" role="radio" aria-checked="false" data-field="time" data-value="35">35 MIN</button>
+                  <button class="filter-chip" type="button" role="radio" aria-checked="false" data-field="time" data-value="60">60 MIN</button>
+                </div>
+              </fieldset>
+              <fieldset class="input-block compact-block">
+                <legend><span class="question-number">04</span>同行几个人？</legend>
+                <div class="party-stepper" aria-label="同行人数">
+                  <button type="button" class="stepper-button" id="party-minus" aria-label="减少同行人数">−</button>
+                  <output id="party-count" aria-live="polite">1</output><span>人</span>
+                  <button type="button" class="stepper-button" id="party-plus" aria-label="增加同行人数">＋</button>
+                </div>
+              </fieldset>
+            </div>
+
+            <fieldset class="input-block preference-block">
+              <legend><span class="question-number">+</span>还有什么想法？<small>可多选</small></legend>
+              <div class="chip-row preference-row">
+                <button class="filter-chip" type="button" aria-pressed="false" data-pref="light">清爽一点</button>
+                <button class="filter-chip" type="button" aria-pressed="false" data-pref="full">要有饱腹感</button>
+                <button class="filter-chip" type="button" aria-pressed="false" data-pref="sugar">少糖/无糖</button>
+                <button class="filter-chip" type="button" aria-pressed="false" data-pref="share">适合分享</button>
+              </div>
+            </fieldset>
+
+            <div class="form-footer">
+              <p><span class="tiny-live-dot"></span>将调用活动、营养、优惠与门店 MCP</p>
+              <button class="button button-dark" type="submit" id="generate-button"><span class="button-label">生成我的麦时刻</span><span class="button-loader" aria-hidden="true"></span><span aria-hidden="true">↗</span></button>
+            </div>
+          </form>
+
+          <aside class="planner-aside reveal reveal-delay-1">
+            <div class="aside-index">MOMENT / 你的时刻</div>
+            <div class="aside-copy">
+              <p>“最好吃的决定，<br><strong>往往不需要想太久。</strong>”</p>
+              <span>— 麦时刻编辑部</span>
+            </div>
+            <div class="aside-glyph" aria-hidden="true"><span>✳</span><i></i><i></i><i></i></div>
+            <div class="aside-foot"><span>输入越诚实</span><span>答案越像你</span></div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="result-section section-pad" id="result-section" aria-labelledby="result-title" aria-live="polite">
+        <div class="result-header reveal">
+          <div>
+            <p class="eyebrow"><span>03</span> THE ANSWER / 此刻答案</p>
+            <p class="result-context" id="result-context">赶稿冲刺 · 20 MIN · 1 人</p>
+            <h2 id="result-title">先把手头这件事做完，<br><em>剩下的交给这一餐。</em></h2>
+          </div>
+          <div class="result-id"><span>PASS ID</span><strong id="pass-id">MOM—024</strong><small>JUST FOR THIS MOMENT</small></div>
+        </div>
+
+        <div class="result-grid">
+          <div class="recommendations-column">
+            <div class="reason-strip"><span class="reason-mark">✦</span><p id="reason-text">一个不打断节奏、却能让你重新有电的选择。</p><span class="reason-line" aria-hidden="true"></span></div>
+            <div class="recommendations" id="recommendations" aria-label="推荐方案"></div>
+            <div class="result-actions">
+              <button type="button" class="button button-primary" id="copy-share"><span>复制分享卡</span><span aria-hidden="true">⌘</span></button>
+              <button type="button" class="button button-outline" id="regenerate"><span>再次生成</span><span aria-hidden="true">↻</span></button>
+              <button type="button" class="button button-quiet" id="open-chain">查看 MCP 链路 <span aria-hidden="true">↗</span></button>
+            </div>
+          </div>
+
+          <aside class="demo-console reveal reveal-delay-1" id="demo-console" aria-labelledby="console-title">
+            <div class="console-header"><div><p class="eyebrow"><span>LIVE</span> FIELD CONSOLE</p><h3 id="console-title">现场 Demo 台</h3></div><span class="console-state" id="console-state"><i></i><b>DEMO DATA</b></span></div>
+            <div class="console-summary"><div><span>TOOL CALLS</span><strong id="tool-count">06</strong></div><div><span>LATENCY</span><strong id="latency">1.24s</strong></div><div><span>MODE</span><strong id="console-mode">FALLBACK</strong></div></div>
+            <div class="console-log" id="console-log" role="log" aria-label="MCP 调用日志" aria-live="polite"></div>
+            <div class="console-foot"><span class="console-pulse"></span><span id="console-foot-text">MCP 未配置，已切换至可演示数据</span><button type="button" class="icon-button" id="clear-log" aria-label="清除调用日志">×</button></div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="chain-section section-pad" id="chain" aria-labelledby="chain-title">
+        <div class="section-heading reveal">
+          <div><p class="eyebrow"><span>04</span> UNDER THE HOOD / 这不是魔法</p><h2 id="chain-title">每个“刚刚好”，<br><em>都有一条链路。</em></h2></div>
+          <p class="heading-note">MCP 把分散的信息<br>接成一个可行动的答案。</p>
+        </div>
+        <div class="chain-layout">
+          <div class="chain-visual reveal" aria-label="MCP 数据链路图">
+            <div class="chain-line" aria-hidden="true"></div>
+            <div class="chain-node node-activity"><span class="node-index">01</span><i class="node-symbol">◒</i><strong>活动</strong><small>campaign-calendar</small><b class="node-status">READY</b></div>
+            <div class="chain-node node-nutrition"><span class="node-index">02</span><i class="node-symbol">♧</i><strong>营养</strong><small>list-nutrition-foods</small><b class="node-status">READY</b></div>
+            <div class="chain-node node-price"><span class="node-index">03</span><i class="node-symbol">＄</i><strong>实价</strong><small>calculate-price</small><b class="node-status">READY</b></div>
+            <div class="chain-node node-store"><span class="node-index">04</span><i class="node-symbol">⌖</i><strong>门店</strong><small>query-nearby-stores</small><b class="node-status">READY</b></div>
+            <div class="chain-center"><span>YOUR<br>MOMENT</span><b>→</b></div>
+          </div>
+          <div class="chain-copy reveal reveal-delay-1">
+            <p class="pull-quote">“不是告诉你<br>吃什么，<em>而是为什么现在吃它。</em>”</p>
+            <p class="chain-description">把你的输入交给 MCP，麦时刻会并行查看当期活动、可用营养信息、优惠规则和附近门店，再把结果翻译成一张可以马上出发的菜单。</p>
+            <dl class="chain-metrics"><div><dt>04</dt><dd>类实时数据</dd></div><div><dt>06</dt><dd>MCP 工具调用</dd></div><div><dt>01</dt><dd>可执行理由</dd></div></dl>
+          </div>
+        </div>
+      </section>
+
+      <section class="closing section-pad reveal" aria-labelledby="closing-title">
+        <div class="closing-ticket"><span class="closing-perf">YOUR NEXT<br>MOMENT</span><div class="closing-copy"><p class="eyebrow"><span>05</span> TAKE THE MOMENT</p><h2 id="closing-title">现在，<br><em>去麦一下。</em></h2><a class="button button-dark" href="#planner">重新找一个理由 <span aria-hidden="true">↗</span></a></div><div class="closing-barcode" aria-hidden="true"></div><span class="closing-note">NOT A MENU.<br>A LITTLE MOMENT.</span></div>
+      </section>
+    </main>
+
+    <footer class="site-footer"><div class="footer-brand">麦时刻 / MCD MOMENTS</div><p>Hackathon prototype · MCP powered experience</p><p class="footer-disclaimer">演示数据仅用于产品展示，不构成营养、价格或库存承诺；实时信息以官方渠道及门店实际为准。</p></footer>
+  </div>
+
+  <dialog class="chain-dialog" id="chain-dialog" aria-labelledby="dialog-title">
+    <div class="dialog-inner"><div class="dialog-head"><div><p class="eyebrow"><span>TRACE</span> MCP CALL CHAIN</p><h2 id="dialog-title">看见这份答案<br><em>是怎么来的。</em></h2></div><button class="dialog-close icon-button" id="dialog-close" type="button" aria-label="关闭链路详情">×</button></div><div class="dialog-body" id="dialog-body"></div><div class="dialog-foot"><span class="tiny-live-dot"></span><span>链路数据会随你的下一次生成更新</span></div></div>
+  </dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>

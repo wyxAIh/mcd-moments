@@ -1,0 +1,10 @@
+# Local secrets and transient files
+.env
+.env.*
+!.env.example
+node_modules/
+.playwright-cli/
+.workbuddy/
+*.log
+.DS_Store
+Thumbs.db
