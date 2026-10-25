@@ -70,6 +70,7 @@ async function mcpCall(name, args = {}) {
   if (endpoint.protocol !== 'https:' && endpoint.hostname !== 'localhost' && endpoint.hostname !== '127.0.0.1') {
     throw new Error('MCP endpoint must use HTTPS');
   }
+  const requestId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
@@ -77,12 +78,12 @@ async function mcpCall(name, args = {}) {
       'Accept': 'application/json, text/event-stream',
       'Authorization': `Bearer ${MCP_TOKEN}`
     },
-    body: JSON.stringify({ jsonrpc: '2.0', id: `${Date.now()}-${Math.random().toString(16).slice(2)}`, method: 'tools/call', params: { name, arguments: args } }),
+    body: JSON.stringify({ jsonrpc: '2.0', id: requestId, method: 'tools/call', params: { name, arguments: args } }),
     signal: AbortSignal.timeout(10000)
   });
   const text = await response.text();
   if (!response.ok) throw new Error(`MCP HTTP ${response.status}`);
-  const payload = response.headers.get('content-type')?.includes('text/event-stream') ? responseTextFromSse(text) : JSON.parse(text);
+  const payload = response.headers.get('content-type')?.includes('text/event-stream') ? responseTextFromSse(text, requestId) : JSON.parse(text);
   if (payload.error) throw new Error(payload.error.message || `MCP error calling ${name}`);
   return Object.prototype.hasOwnProperty.call(payload, 'result') ? payload.result : payload;
 }
