@@ -83,6 +83,7 @@
 
   function normalizeCandidate(candidate) {
     const items = Array.isArray(candidate?.items) ? candidate.items : [];
+    const perPersonPrice = candidate?.estimatedPricePerPersonCny ?? (candidate?.estimatedPriceCny !== null && candidate?.estimatedPriceCny !== undefined ? Number(candidate.estimatedPriceCny) / state.partySize : null);
     return {
       ...candidate,
       id: safeText(candidate?.id, 'live-candidate'),
@@ -92,7 +93,7 @@
       reason: safeText(candidate?.reason),
       items: items.map(item => typeof item === 'string' ? item : safeText(item?.name || item?.title, '推荐单品')),
       estimatedPriceCny: candidate?.estimatedPriceCny ?? candidate?.price ?? null,
-      estimatedPricePerPersonCny: candidate?.estimatedPricePerPersonCny ?? null,
+      estimatedPricePerPersonCny: perPersonPrice,
       estimatedCaloriesKcal: candidate?.estimatedCaloriesKcal ?? candidate?.calories ?? null,
       discountCny: candidate?.discountCny ?? candidate?.saving ?? 0,
       priceSource: candidate?.priceSource || 'unknown',
