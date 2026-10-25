@@ -51,18 +51,15 @@ function readBody(req) {
   });
 }
 
-function responseTextFromSse(text) {
+function responseTextFromSse(text, requestId) {
   const dataLines = text.split(/\r?\n/).filter(line => line.startsWith('data:')).map(line => line.slice(5).trim());
   for (let i = dataLines.length - 1; i >= 0; i--) {
     if (!dataLines[i] || dataLines[i] === '[DONE]') continue;
-    try {
-      const event = JSON.parse(dataLines[i]);
-      if (event.result) return event.result;
-      if (event.error) throw new Error(event.error.message || 'MCP returned an error');
-      return event;
-    } catch (err) {
-      if (err.message && err.message !== 'Unexpected end of JSON input') throw err;
-    }
+    let event;
+    try { event = JSON.parse(dataLines[i]); } catch { continue; }
+    if (event.id !== undefined && String(event.id) !== String(requestId)) continue;
+    if (event.error) throw new Error(event.error.message || 'MCP returned an error');
+    if (Object.prototype.hasOwnProperty.call(event, 'result')) return event;
   }
   throw new Error('MCP returned no JSON-RPC result');
 }
@@ -87,7 +84,7 @@ async function mcpCall(name, args = {}) {
   if (!response.ok) throw new Error(`MCP HTTP ${response.status}`);
   const payload = response.headers.get('content-type')?.includes('text/event-stream') ? responseTextFromSse(text) : JSON.parse(text);
   if (payload.error) throw new Error(payload.error.message || `MCP error calling ${name}`);
-  return payload.result || payload;
+  return Object.prototype.hasOwnProperty.call(payload, 'result') ? payload.result : payload;
 }
 
 function resultData(result) {
